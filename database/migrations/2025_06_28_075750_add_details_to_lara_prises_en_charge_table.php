@@ -1,0 +1,31 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('lara_prises_en_charge', function (Blueprint $table) {
+            $table->boolean('demarrage_pc')->default(false)->after('remarques');
+            $table->boolean('demarrage_os')->default(false)->after('demarrage_pc');
+            $table->text('dommages')->nullable()->after('demarrage_os');
+            $table->text('materiel_depose')->nullable()->after('dommages');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('lara_prises_en_charge', function (Blueprint $table) {
+            //
+        });
+    }
+};
