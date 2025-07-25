@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CommentaireController;
+use App\Http\Controllers\DepannageController;
 use App\Http\Controllers\PriseEnChargeController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
@@ -54,4 +55,14 @@ Route::post('/prises/{prise}/commentaire', [CommentaireController::class, 'store
 
 
 
-Route::get('/depannages', [PriseEnChargeController::class, 'depannages'])->name('depannages');
+Route::get('/depannages', [DepannageController::class, 'index'])->name('depannages.index');
+Route::get('/depannages/{id}', [DepannageController::class, 'show'])->name('depannages.show');
+
+Route::get('/api/client/{id}', function ($id) {
+    return DB::table('llx_societe')
+        ->select('rowid', 'nom', 'address', 'zip', 'town', 'phone', 'email', 'code_client')
+        ->where('rowid', $id)
+        ->first();
+});
+
+

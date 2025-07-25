@@ -4,14 +4,13 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Http;
+use Inertia\Inertia;
 
 class TakeitController extends Controller
 {
     public function index()
     {
-        // On récupère les clients depuis Dolibarr
         $clients = DB::table('llx_societe')
             ->select('rowid', 'nom', 'code_client')
             ->orderBy('nom')
@@ -59,12 +58,14 @@ class TakeitController extends Controller
             "town" => $request->input('town'),
             "email" => $request->input('email'),
             "phone" => $request->input('phone'),
-            "client" => "1"
+            "client" => "1",
+            "code_client" => "-1"
         ];
 
         $response = Http::withHeaders([
             'DOLAPIKEY' => env('DOLIBARR_API_KEY'),
         ])->post(env('DOLIBARR_API_URL') . '/thirdparties', $clientData);
+
 
         if ($response->successful()) {
             return response()->json($response->json(), 201);
@@ -72,32 +73,49 @@ class TakeitController extends Controller
             return response()->json([
                 'message' => 'Erreur lors de la création du client',
                 'status' => $response->status(),
-                'body' => $response->body(), // ← pour voir le détail
+                'body' => $response->body(),
             ], $response->status());
         }
+
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
             'client_id' => 'required|integer',
-            'type' => 'nullable|string',
-            'marque' => 'nullable|string',
-            'modele' => 'nullable|string',
-            'numero_serie' => 'nullable|string',
-            'accessoires' => 'nullable|string',
-            'etat' => 'nullable|string',
+            'materiel_id' => 'required|integer',
             'description' => 'nullable|string',
             'remarques' => 'nullable|string',
+            'materiel_depose' => 'nullable|string',
+            'demarrage_os' => 'nullable|boolean',
+            'demarrage_pc' => 'nullable|boolean',
+            'services' => 'nullable|array',
         ]);
 
-        DB::table('lara_prises_en_charge')->insert([
-            ...$data,
+        $priseId = DB::table('lara_prises_en_charge')->insertGetId([
+            'client_id' => $data['client_id'],
+            'materiel_id' => $data['materiel_id'],
+            'description' => $data['description'] ?? null,
+            'remarques' => $data['remarques'] ?? null,
+            'materiel_depose' => $data['materiel_depose'] ?? null,
+            'demarrage_os' => $data['demarrage_os'] ?? false,
+            'demarrage_pc' => $data['demarrage_pc'] ?? false,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        return response()->json(['message' => 'OK'], 201);
+        if (!empty($data['services'])) {
+            foreach ($data['services'] as $serviceId) {
+                DB::table('lara_prises_en_charge_service')->insert([
+                    'prise_en_charge_id' => $priseId,
+                    'service_id' => $serviceId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+
+        return response()->json(['message' => 'Prise en charge enregistrée avec succès !'], 201);
     }
 
     public function storeMateriel(Request $request)
@@ -110,9 +128,9 @@ class TakeitController extends Controller
             'numero_serie' => 'nullable|string',
             'accessoires' => 'nullable|string',
             'etat' => 'nullable|string',
+            'mot_de_passe' => 'nullable|string',
         ]);
 
-        // Vérifie si déjà présent
         $existing = DB::table('lara_materiels')
             ->where('client_id', $data['client_id'])
             ->where('type', $data['type'])
@@ -131,17 +149,6 @@ class TakeitController extends Controller
             'updated_at' => now(),
         ]);
 
-        if ($request->has('services')) {
-            foreach ($request->services as $serviceId) {
-                DB::table('lara_prises_en_charge_service')->insert([
-                    'prise_en_charge_id' => $id,
-                    'service_id' => $serviceId,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-        }
-
         return response()->json(DB::table('lara_materiels')->find($id));
     }
 
@@ -157,7 +164,7 @@ class TakeitController extends Controller
     {
         $prises = DB::table('lara_prises_en_charge as p')
             ->leftJoin('llx_societe as c', 'p.client_id', '=', 'c.rowid')
-            ->select('p.id', 'p.created_at', 'p.type', 'p.modele', 'p.numero_serie', 'c.nom as client_nom')
+            ->select('p.id', 'p.created_at', 'p.description', 'c.nom as client_nom')
             ->orderByDesc('p.created_at')
             ->get();
 
@@ -187,6 +194,4 @@ class TakeitController extends Controller
         ]);
         return response()->json(['message' => 'Statut mis à jour']);
     }
-
-
 }

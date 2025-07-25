@@ -1,6 +1,8 @@
 <template>
     <div class="p-8">
-        <h1 class="text-3xl font-bold mb-6">📦 Prises en charge</h1>
+        <a href="../" class="bg-white shadow rounded-lg px-4 py-2 border hover:border-blue-500 hover:bg-blue-50 transition cursor-pointer">Retour</a>
+
+        <h1 class="text-3xl font-bold mb-6 mt-6">📦 Prises en charge</h1>
 
         <div v-if="prises.length === 0" class="text-gray-500">Aucune prise en charge enregistrée.</div>
 
